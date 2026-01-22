@@ -1,20 +1,17 @@
-# Use a slim base image
-FROM python:3.8-slim
+FROM rust:latest AS builder
 
-# Set the working directory
 WORKDIR /app
 
-# Install git and dependencies
-RUN apt-get update && apt-get install -y git 
+COPY Cargo.toml ./
+COPY src ./src
 
-# Clone ParamSpider repository
-RUN git clone https://github.com/devanshbatham/paramspider
+RUN cargo build --release
 
-# Change the working directory to the cloned repository
-WORKDIR /app/paramspider
+FROM debian:bookworm-slim
 
-# Install ParamSpider dependencies using pip
-RUN pip install .
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set the entrypoint to run paramspider
+COPY --from=builder /app/target/release/paramspider /usr/local/bin/paramspider
+
 ENTRYPOINT ["paramspider"]
